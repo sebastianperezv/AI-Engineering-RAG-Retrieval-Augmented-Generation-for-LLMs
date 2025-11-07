@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#ae6968", "description": "\"Eris is the goddess known for causing discord and trouble, most notably by creating the golden apple labeled \u0027For the fairest\u0027 to incite conflict among other goddesses.\"\u003cSEP\u003e\"Eris is the goddess of discord, known for creating trouble by causing a dispute among goddesses, which led to the selection of Paris.\"", "entity_type": "\"PERSON\"", "id": "\"ERIS\"", "label": "\"ERIS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3\u003cSEP\u003echunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Eris is the goddess known for causing discord and trouble, most notably by creating the golden apple labeled \u0027For the fairest\u0027 to incite conflict among other goddesses.\"\u003cSEP\u003e\"Eris is the goddess of discord, known for creating trouble by causing a dispute among goddesses, which led to the selection of Paris.\""}, {"color": "#ff43ff", "description": "\"The Trojan War was a prolonged conflict lasting ten years, started because of Helen\u0027s elopement with Paris.\"", "entity_type": "\"EVENT\"", "id": "\"TROJAN WAR\"", "label": "\"TROJAN WAR\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"The Trojan War was a prolonged conflict lasting ten years, started because of Helen\u0027s elopement with Paris.\""}, {"color": "#831826", "description": "\"Ares is the god of war, noted for his lack of loyalty and for being easily swayed by Aphrodite.\"", "entity_type": "\"PERSON\"", "id": "\"ARES\"", "label": "\"ARES\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Ares is the god of war, noted for his lack of loyalty and for being easily swayed by Aphrodite.\""}, {"color": "#431308", "description": "\"Aphrodite is the goddess of love and beauty, involved in causing a war unintentionally. Her influence led Paris to decide and chose her gift, inciting the Trojan War.\"\u003cSEP\u003e\"Aphrodite is the goddess of love, renowned for her beauty and ability to start wars inadvertently.\"", "entity_type": "\"PERSON\"", "id": "\"APHRODITE\"", "label": "\"APHRODITE\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3\u003cSEP\u003echunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Aphrodite is the goddess of love and beauty, involved in causing a war unintentionally. Her influence led Paris to decide and chose her gift, inciting the Trojan War.\"\u003cSEP\u003e\"Aphrodite is the goddess of love, renowned for her beauty and ability to start wars inadvertently.\""}, {"color": "#7a2819", "description": "\"Artemis is the goddess of hunting and the moon, known for her fighting skills and evading Alpheus\u0027 pursuit.\"", "entity_type": "\"PERSON\"", "id": "\"ARTEMIS\"", "label": "\"ARTEMIS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Artemis is the goddess of hunting and the moon, known for her fighting skills and evading Alpheus\u0027 pursuit.\""}, {"color": "#2b1c97", "description": "\"Alpheus is a river god who fell in love with Artemis and pursued her, but failed to capture her.\"", "entity_type": "\"PERSON\"", "id": "\"ALPHEUS\"", "label": "\"ALPHEUS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Alpheus is a river god who fell in love with Artemis and pursued her, but failed to capture her.\""}, {"color": "#76e6b0", "description": "\"Zeus is the god of the sky and ruler of the gods, known for his power and authority among the deities.\"\u003cSEP\u003e\"Zeus is the king of the gods, brother to Hades and Poseidon, and involved in resolving Hestia\u0027s marriage issue.\"", "entity_type": "\"PERSON\"", "id": "\"ZEUS\"", "label": "\"ZEUS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3\u003cSEP\u003echunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Zeus is the god of the sky and ruler of the gods, known for his power and authority among the deities.\"\u003cSEP\u003e\"Zeus is the king of the gods, brother to Hades and Poseidon, and involved in resolving Hestia\u0027s marriage issue.\""}, {"color": "#2aa008", "description": "\"Hermes is the son of Zeus, known for his swiftness and mischievous nature, capable of creating the first musical instrument, the lyre.\"", "entity_type": "\"PERSON\"", "id": "\"HERMES\"", "label": "\"HERMES\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Hermes is the son of Zeus, known for his swiftness and mischievous nature, capable of creating the first musical instrument, the lyre.\""}, {"color": "#f7f2dc", "description": "\"Baucis and Philemon offered hospitality to Zeus, leading to their hut being transformed into a temple and ensuring their eternal unity.\"", "entity_type": "\"UNKNOWN\"", "id": "\"BAUCIS AND PHILEMON\"", "label": "\"BAUCIS AND PHILEMON\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Baucis and Philemon offered hospitality to Zeus, leading to their hut being transformed into a temple and ensuring their eternal unity.\""}, {"color": "#2b274e", "description": "\"Hestia is the goddess of the home and family, known for her peaceful nature and declining marriage proposals from Apollo and Poseidon.\"", "entity_type": "\"PERSON\"", "id": "\"HESTIA\"", "label": "\"HESTIA\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Hestia is the goddess of the home and family, known for her peaceful nature and declining marriage proposals from Apollo and Poseidon.\""}, {"color": "#62bf34", "description": "\"Helen is considered the most beautiful woman, whose elopement with Paris initiated the Trojan War.\"", "entity_type": "\"PERSON\"", "id": "\"HELEN\"", "label": "\"HELEN\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Helen is considered the most beautiful woman, whose elopement with Paris initiated the Trojan War.\""}, {"color": "#76af2a", "description": "\"Paris is a mortal chosen to judge the fairest goddess, whose decision sparked the events leading to the Trojan War.\"", "entity_type": "\"PERSON\"", "id": "\"PARIS\"", "label": "\"PARIS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Paris is a mortal chosen to judge the fairest goddess, whose decision sparked the events leading to the Trojan War.\""}, {"color": "#6e414a", "description": "\"Athena is a goddess who offered Paris courage and success to win the golden apple, involved in the competition among goddesses.\"\u003cSEP\u003e\"Athena is the strong and wise daughter of Zeus, known for her strategic skill in warfare and gifting of the olive tree to Athens.\"", "entity_type": "\"PERSON\"", "id": "\"ATHENA\"", "label": "\"ATHENA\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3\u003cSEP\u003echunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Athena is a goddess who offered Paris courage and success to win the golden apple, involved in the competition among goddesses.\"\u003cSEP\u003e\"Athena is the strong and wise daughter of Zeus, known for her strategic skill in warfare and gifting of the olive tree to Athens.\""}, {"color": "#9a36f1", "description": "\"Demeter is a goddess in mythology who curses Erysichthon with insatiable hunger as a form of punishment.\"\u003cSEP\u003e\"Demeter is the goddess of agriculture who punished Erysichthon for his greed and disrespect toward her sacred tree.\"", "entity_type": "\"PERSON\"", "id": "\"DEMETER\"", "label": "\"DEMETER\"", "shape": "dot", "size": 10, "source_id": "chunk-0f21f77044f0743885ff9662ab720148\u003cSEP\u003echunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Demeter is a goddess in mythology who curses Erysichthon with insatiable hunger as a form of punishment.\"\u003cSEP\u003e\"Demeter is the goddess of agriculture who punished Erysichthon for his greed and disrespect toward her sacred tree.\""}, {"color": "#a36088", "description": "\"Erysichthon is a figure in mythology who is cursed with insatiable hunger as a punishment from Demeter.\"\u003cSEP\u003e\"Erysichthon is an arrogant man cursed by Demeter with eternal hunger due to his disrespect towards her sacred tree.\"", "entity_type": "\"PERSON\"", "id": "\"ERYSICHTHON\"", "label": "\"ERYSICHTHON\"", "shape": "dot", "size": 10, "source_id": "chunk-0f21f77044f0743885ff9662ab720148\u003cSEP\u003echunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Erysichthon is a figure in mythology who is cursed with insatiable hunger as a punishment from Demeter.\"\u003cSEP\u003e\"Erysichthon is an arrogant man cursed by Demeter with eternal hunger due to his disrespect towards her sacred tree.\""}, {"color": "#e9d678", "description": "\"Poseidon is the god of the sea, brother to Hades and Zeus, and one of Hestia\u0027s suitors.\"\u003cSEP\u003e\"Poseidon is the god of the seas, known for his rivalry with Athena and his power over water and the sea.\"", "entity_type": "\"PERSON\"", "id": "\"POSEIDON\"", "label": "\"POSEIDON\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3\u003cSEP\u003echunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Poseidon is the god of the sea, brother to Hades and Zeus, and one of Hestia\u0027s suitors.\"\u003cSEP\u003e\"Poseidon is the god of the seas, known for his rivalry with Athena and his power over water and the sea.\""}, {"color": "#e1c730", "description": "\"Hades is the god of the Underworld, responsible for keeping the dead, and was moved by Orpheus\u0027 singing.\"", "entity_type": "\"PERSON\"", "id": "\"HADES\"", "label": "\"HADES\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Hades is the god of the Underworld, responsible for keeping the dead, and was moved by Orpheus\u0027 singing.\""}, {"color": "#bb8e75", "description": "\"Orpheus is a gifted musician who attempted to retrieve his wife from the Underworld by enchanting Hades with his music.\"", "entity_type": "\"PERSON\"", "id": "\"ORPHEUS\"", "label": "\"ORPHEUS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Orpheus is a gifted musician who attempted to retrieve his wife from the Underworld by enchanting Hades with his music.\""}, {"color": "#618c8b", "description": "\"Hera is a goddess who offered Paris power to win his favor, involved in the story of the golden apple incident.\"\u003cSEP\u003e\"Hera is the goddess associated with marriage and family, and she was one of the three goddesses involved in the dispute over the golden apple.\"", "entity_type": "\"PERSON\"", "id": "\"HERA\"", "label": "\"HERA\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3\u003cSEP\u003echunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Hera is a goddess who offered Paris power to win his favor, involved in the story of the golden apple incident.\"\u003cSEP\u003e\"Hera is the goddess associated with marriage and family, and she was one of the three goddesses involved in the dispute over the golden apple.\""}, {"color": "#3f7ded", "description": "\"Hephaestus is Hera\u0027s son, a blacksmith who created a trap for Hera as revenge but ultimately freed her, and married Aphrodite.\"", "entity_type": "\"PERSON\"", "id": "\"HEPHAESTUS\"", "label": "\"HEPHAESTUS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Hephaestus is Hera\u0027s son, a blacksmith who created a trap for Hera as revenge but ultimately freed her, and married Aphrodite.\""}, {"color": "#48531c", "description": "\"Apollo is the god of music, arts, and prophecy, known for his eventual enchantment with the lyre that Hermes crafted.\"\u003cSEP\u003e\"Apollo is the god of music, poetry, and twin brother to Artemis, also a suitor of Hestia.\"", "entity_type": "\"PERSON\"", "id": "\"APOLLO\"", "label": "\"APOLLO\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3\u003cSEP\u003echunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Apollo is the god of music, arts, and prophecy, known for his eventual enchantment with the lyre that Hermes crafted.\"\u003cSEP\u003e\"Apollo is the god of music, poetry, and twin brother to Artemis, also a suitor of Hestia.\""}, {"color": "#a108e6", "description": "\"The king of Sparta is Helen\u0027s husband, who declared war on Troy after Helen left with Paris.\"", "entity_type": "\"PERSON\"", "id": "\"KING OF SPARTA\"", "label": "\"KING OF SPARTA\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"The king of Sparta is Helen\u0027s husband, who declared war on Troy after Helen left with Paris.\""}, {"color": "#093448", "description": "\"The Underworld is ruled by Hades and is the realm of the dead, where Orpheus journeyed to retrieve his wife.\"", "entity_type": "\"GEO\"", "id": "\"THE UNDERWORLD\"", "label": "\"THE UNDERWORLD\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"The Underworld is ruled by Hades and is the realm of the dead, where Orpheus journeyed to retrieve his wife.\""}, {"color": "#800a62", "description": "\"Baucis is an elderly woman known for showing hospitality to Zeus and Hermes, leading to her hut being transformed into a temple.\"", "entity_type": "\"PERSON\"", "id": "\"BAUCIS\"", "label": "\"BAUCIS\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Baucis is an elderly woman known for showing hospitality to Zeus and Hermes, leading to her hut being transformed into a temple.\""}, {"color": "#482784", "description": "\"The Golden Apple is central to a story where it becomes a source of contention among Hera, Aphrodite, and Athena, initiating a dispute over beauty.\"", "entity_type": "\"EVENT\"", "id": "\"THE GOLDEN APPLE\"", "label": "\"THE GOLDEN APPLE\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"The Golden Apple is central to a story where it becomes a source of contention among Hera, Aphrodite, and Athena, initiating a dispute over beauty.\""}, {"color": "#fa2084", "description": "\"The Golden Apple was a catalyst in the mythological story, inscribed with \u0027For the fairest\u0027 by Eris, leading to the eventual judgement by Paris.\"", "entity_type": "\"EVENT\"", "id": "\"GOLDEN APPLE\"", "label": "\"GOLDEN APPLE\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"The Golden Apple was a catalyst in the mythological story, inscribed with \u0027For the fairest\u0027 by Eris, leading to the eventual judgement by Paris.\""}, {"color": "#2ffab5", "description": "\"The Trojan War is a significant mythological war involving various gods and mortals, influenced by personal interests and allegiances.\"", "entity_type": "\"EVENT\"", "id": "\"THE TROJAN WAR\"", "label": "\"THE TROJAN WAR\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"The Trojan War is a significant mythological war involving various gods and mortals, influenced by personal interests and allegiances.\""}, {"color": "#60ebbe", "description": "\"Athens is a city named after Athena, becoming a strong and prosperous capital city of Greece.\"", "entity_type": "\"GEO\"", "id": "\"ATHENS\"", "label": "\"ATHENS\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Athens is a city named after Athena, becoming a strong and prosperous capital city of Greece.\""}, {"color": "#1db33b", "description": "\"Four Black Horses are the steeds that draw Hades\u0027 chariot, emphasizing his dominion over the Underworld.\"", "entity_type": "\"CATEGORY\"", "id": "\"FOUR BLACK HORSES\"", "label": "\"FOUR BLACK HORSES\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Four Black Horses are the steeds that draw Hades\u0027 chariot, emphasizing his dominion over the Underworld.\""}, {"color": "#a9a2ac", "description": "\"The Olive Tree was a gift from Athena to the people, symbolizing peace and providing multiple resources for the city.\"", "entity_type": "\"CATEGORY\"", "id": "\"THE OLIVE TREE\"", "label": "\"THE OLIVE TREE\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"The Olive Tree was a gift from Athena to the people, symbolizing peace and providing multiple resources for the city.\""}, {"color": "#8565b3", "description": "\"Troy is the city to which Paris and Helen fled, and where the Trojan War took place, leading to a significant historical conflict.\"", "entity_type": "\"GEO\"", "id": "\"TROY\"", "label": "\"TROY\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Troy is the city to which Paris and Helen fled, and where the Trojan War took place, leading to a significant historical conflict.\""}, {"color": "#23af53", "description": "\"The Throne is the golden seat created by Hephaestus for Hera, cleverly designed to trap her as a form of retaliation.\"", "entity_type": "\"CATEGORY\"", "id": "\"THE THRONE\"", "label": "\"THE THRONE\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"The Throne is the golden seat created by Hephaestus for Hera, cleverly designed to trap her as a form of retaliation.\""}, {"color": "#4ad52d", "description": "\"Philemon is the husband of Baucis, known for his hospitality and devotion, ultimately transformed into a tree alongside his wife.\"", "entity_type": "\"PERSON\"", "id": "\"PHILEMON\"", "label": "\"PHILEMON\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Philemon is the husband of Baucis, known for his hospitality and devotion, ultimately transformed into a tree alongside his wife.\""}, {"color": "#b5454c", "description": "\"The Lyre is the first musical instrument created by Hermes, later exchanged with Apollo for a herd of cattle.\"", "entity_type": "\"CATEGORY\"", "id": "\"THE LYRE\"", "label": "\"THE LYRE\"", "shape": "dot", "size": 10, "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"The Lyre is the first musical instrument created by Hermes, later exchanged with Apollo for a herd of cattle.\""}, {"color": "#db0c95", "description": "\"Sparta is the city-state ruled by Helen\u0027s husband, who initiated the Trojan War after Helen ran away with Paris.\"", "entity_type": "\"GEO\"", "id": "\"SPARTA\"", "label": "\"SPARTA\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Sparta is the city-state ruled by Helen\u0027s husband, who initiated the Trojan War after Helen ran away with Paris.\""}, {"color": "#9deef8", "description": "\"The Curse of Hunger was imposed by Demeter upon Erysichthon as a punishment, illustrating divine retribution for greed.\"", "entity_type": "\"EVENT\"", "id": "\"THE CURSE OF HUNGER\"", "label": "\"THE CURSE OF HUNGER\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"The Curse of Hunger was imposed by Demeter upon Erysichthon as a punishment, illustrating divine retribution for greed.\""}, {"color": "#cbfeba", "description": "\"Dionysus is the god of wine who intoxicated Hephaestus, aiding in Hera\u0027s release from the trap.\"", "entity_type": "\"PERSON\"", "id": "\"DIONYSUS\"", "label": "\"DIONYSUS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Dionysus is the god of wine who intoxicated Hephaestus, aiding in Hera\u0027s release from the trap.\""}, {"color": "#3a0a7c", "description": "\"Mount Olympus is the mythical home of the gods, where Hephaestus was brought to release Hera, and where Hestia was in charge of the home and family.\"", "entity_type": "\"GEO\"", "id": "\"MOUNT OLYMPUS\"", "label": "\"MOUNT OLYMPUS\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Mount Olympus is the mythical home of the gods, where Hephaestus was brought to release Hera, and where Hestia was in charge of the home and family.\""}, {"color": "#53ce40", "description": "\"The Oak Tree was sacred to Demeter and desecrated by Erysichthon, leading to his curse.\"", "entity_type": "\"CATEGORY\"", "id": "\"THE OAK TREE\"", "label": "\"THE OAK TREE\"", "shape": "dot", "size": 10, "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"The Oak Tree was sacred to Demeter and desecrated by Erysichthon, leading to his curse.\""}]);
+                  edges = new vis.DataSet([{"description": "\"Eris initiated the conflict among the goddesses with the golden apple that directly led to Paris choosing Aphrodite and ultimately the Trojan War.\"", "from": "\"ERIS\"", "keywords": "\"instigation, discord\"", "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Eris initiated the conflict among the goddesses with the golden apple that directly led to Paris choosing Aphrodite and ultimately the Trojan War.\"", "to": "\"TROJAN WAR\"", "width": 9.0}, {"description": "\"Ares was in love with Aphrodite, which influenced his actions during the Trojan War.\"", "from": "\"ARES\"", "keywords": "\"love, influence\"", "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Ares was in love with Aphrodite, which influenced his actions during the Trojan War.\"", "to": "\"APHRODITE\"", "width": 6.0}, {"description": "\"Artemis evaded Alpheus\u0027 romantic pursuit successfully by disguising herself, demonstrating her cleverness and independence.\"", "from": "\"ARTEMIS\"", "keywords": "\"pursuit, evasion\"", "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Artemis evaded Alpheus\u0027 romantic pursuit successfully by disguising herself, demonstrating her cleverness and independence.\"", "to": "\"ALPHEUS\"", "width": 7.0}, {"description": "\"Zeus is the father of Hermes, who accompanies and aids him during their journey disguised as ordinary men.\"", "from": "\"ZEUS\"", "keywords": "\"father-son relationship, guidance\"", "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Zeus is the father of Hermes, who accompanies and aids him during their journey disguised as ordinary men.\"", "to": "\"HERMES\"", "width": 8.0}, {"description": "\"Baucis and Philemon offered hospitality to Zeus, leading to their hut being transformed into a temple and ensuring their eternal unity.\"", "from": "\"ZEUS\"", "keywords": "\"hospitality, divine reward\"", "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Baucis and Philemon offered hospitality to Zeus, leading to their hut being transformed into a temple and ensuring their eternal unity.\"", "to": "\"BAUCIS AND PHILEMON\"", "width": 9.0}, {"description": "\"Hestia resolved her marriage issue independently by choosing celibacy, which Zeus respected, granting her a significant role among the gods.\"", "from": "\"ZEUS\"", "keywords": "\"independence, respect\"", "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Hestia resolved her marriage issue independently by choosing celibacy, which Zeus respected, granting her a significant role among the gods.\"", "to": "\"HESTIA\"", "width": 8.0}, {"description": "\"Helen\u0027s elopement with Paris from Sparta to Troy triggered the onset of the Trojan War as the king of Sparta sought her return.\"", "from": "\"TROJAN WAR\"", "keywords": "\"elopement, war instigation\"", "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Helen\u0027s elopement with Paris from Sparta to Troy triggered the onset of the Trojan War as the king of Sparta sought her return.\"", "to": "\"HELEN\"", "width": 10.0}, {"description": "\"Aphrodite\u0027s promise of the love of the most beautiful woman led Paris to choose her, causing a series of events that ignited the Trojan War.\"", "from": "\"APHRODITE\"", "keywords": "\"promise, influence\"", "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Aphrodite\u0027s promise of the love of the most beautiful woman led Paris to choose her, causing a series of events that ignited the Trojan War.\"", "to": "\"PARIS\"", "width": 8.0}, {"description": "\"Aphrodite participated in the conflict over the golden apple, which was intended \u0027For the fairest,\u0027 leading to tensions among the goddesses.\"", "from": "\"APHRODITE\"", "keywords": "\"beauty, conflict\"", "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Aphrodite participated in the conflict over the golden apple, which was intended \u0027For the fairest,\u0027 leading to tensions among the goddesses.\"", "to": "\"ATHENA\"", "width": 6.0}, {"description": "\"Demeter cursed Erysichthon with insatiable hunger as punishment for desecrating her sacred tree, illustrating his greed and lack of reverence.\"\u003cSEP\u003e\"Demeter curses Erysichthon with insatiable hunger as punishment for his actions.\"", "from": "\"DEMETER\"", "keywords": "\"mythological punishment, divine retribution\"\u003cSEP\u003e\"punishment, disrespect\"", "source_id": "chunk-0f21f77044f0743885ff9662ab720148\u003cSEP\u003echunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Demeter cursed Erysichthon with insatiable hunger as punishment for desecrating her sacred tree, illustrating his greed and lack of reverence.\"\u003cSEP\u003e\"Demeter curses Erysichthon with insatiable hunger as punishment for his actions.\"", "to": "\"ERYSICHTHON\"", "width": 17.0}, {"description": "\"Athena and Poseidon were rivals for the patronage of a city, competing through gifts to the citizens.\"", "from": "\"POSEIDON\"", "keywords": "\"rivalry, competition\"", "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Athena and Poseidon were rivals for the patronage of a city, competing through gifts to the citizens.\"", "to": "\"ATHENA\"", "width": 7.0}, {"description": "\"Hades allowed Orpheus to attempt to retrieve his wife from the Underworld, moved by Orpheus\u0027 enchanting music, although it ended in failure.\"", "from": "\"HADES\"", "keywords": "\"enchantment, temporary release\"", "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Hades allowed Orpheus to attempt to retrieve his wife from the Underworld, moved by Orpheus\u0027 enchanting music, although it ended in failure.\"", "to": "\"ORPHEUS\"", "width": 7.0}, {"description": "\"Hephaestus trapped Hera with a throne out of revenge, but later released her, leading to their reconciliation through Dionysus\u0027 intervention.\"", "from": "\"HERA\"", "keywords": "\"revenge, reconciliation\"", "source_id": "chunk-c47105a85a51888bf9c5ba21170034a3", "title": "\"Hephaestus trapped Hera with a throne out of revenge, but later released her, leading to their reconciliation through Dionysus\u0027 intervention.\"", "to": "\"HEPHAESTUS\"", "width": 6.0}, {"description": "\"Hermes stole Apollo\u0027s cattle and later exchanged them for the lyre, showcasing his mischievous nature and Apollo\u0027s appreciation for music.\"", "from": "\"HERMES\"", "keywords": "\"trickery, exchange\"", "source_id": "chunk-72100c22ea009ce52c5913e0dde029b4", "title": "\"Hermes stole Apollo\u0027s cattle and later exchanged them for the lyre, showcasing his mischievous nature and Apollo\u0027s appreciation for music.\"", "to": "\"APOLLO\"", "width": 8.0}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
